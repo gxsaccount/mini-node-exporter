@@ -10,7 +10,7 @@ prepare:
 clean:
 	rm -r $(BIN_DIR)
 
-$(BIN_DIR)/exporter: clean prepare
+$(BIN_DIR)/exporter: prepare
 	CGO_ENABLED=0 go build -o $@ ./cmd/main.go
 
 .PHONY: main prepare clean

@@ -4,7 +4,6 @@ import (
 	"context"
 	"mini-node-exporter/pkg/metrics"
 	"mini-node-exporter/pkg/proc"
-	"runtime/metrics"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -40,9 +39,10 @@ func Moniter(ctx context.Context) error {
 			logrus.WithError(err).Error("fail to get load")
 			return err
 		}
-		for interval,load : range loads{
+		for interval, load := range loads {
 			metrics.GaugeNodeLoadavg.WithLabelValues(hostname, interval).Set(load)
-		} 
-		
+		}
+		logrus.Infof("hostname:%v,uptime:%v,load:[%v]", hostname, uptime, loads)
+
 	}
 }
