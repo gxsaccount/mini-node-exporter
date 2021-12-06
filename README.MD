@@ -1,78 +1,115 @@
 # mini-node-exporter
 
-Hi, mini-node-exporter is a project as the interview for [mentorship program of Chaos Mesh on LFX Mentorship 2021 fall](https://mentorship.lfx.linuxfoundation.org/project/8db683b0-0273-4a83-9ed9-4c33ee2cfcf0).
-
-You could upload your codes via GitHub(or other platform), and email me(strruiling@gmail.com) the repo link. Or just email me the codes by `tar` or `zip` pack.
-
-Please finish this project before [Mon, August 30, 2021 12:00 +8:00](https://time.is/compare/1200_30_Aug_2021_in_Shanghai).
+mini-node-exporter is a project as the interview
+for [mentorship program of Chaos Mesh on LFX Mentorship 2021 fall](https://mentorship.lfx.linuxfoundation.org/project/8db683b0-0273-4a83-9ed9-4c33ee2cfcf0).
 
 ## Overview
 
-First of all, we do not restrict the programing language and frameworks, use any tech stack as your wish.
+This project implements the following features:
 
-Build, and run an application on **linux**, it could expose several metrics of the host. Then use the prometheus to scrape this exporter, and draw a dashboard on grafana.
+1. Build a web application that exposes several metrics.
+2. Collect and make a dashboard for the exposed metrics.
+3. Orchestrate this monitoring stack on kubernetes.
 
-There are two goals of this small project:
+## Requirements
 
-1. build a web application that exposes several metrics 
-1. collect and make a dashboard for the exposed metrics
+1. Golang v1.11+
+2. Docker (optional)
+3. Kubernetes (optional)
 
-### Goal 1
+## Quick start
 
-Build one web application called `mini-node-exporter`, it should listen on `0.0.0.0:23333`, and expose several endpoints:
+You can deploy only `mini-node-exporter` or the entire monitor stack on kubernetes.
 
-- `/info/hostname` show the hostname with plain text
-- `/info/uptime` show the uptime of the system in seconds with plain text
-- `/info/load` show the load average in 1m, 5m and 15m with JSON, example `{"1m": 0.57, "5m":0.80, "15m":0.77}`
-- `/metrics` expose metrics that could be scraped by prometheus
+### Build on localhost
 
-Required metrics that should be exposed in `/metrics`:
+To build binary locally, simply with Makefile:
 
-- `node_load`: load average, with a label for three duraion, for example:
-- `node_uptime`: uptime of the system in seconds
-
-example:
-
-```
-# TYPE node_load gauge
-node_load{duration="1m"} 0.57
-node_load{duration="5m"} 0.80
-node_load{duration="15m"} 0.77
-# TYPE node_uptime gauge
-node_uptime 9246.58
+```bash
+make
 ```
 
-optional bonus:
+And a binary named `node-exporter` will be built in `./bin`. <br>
+Or you can run it with Docker:
 
-- build a docker image for the application, publish it on DockerHub, and provide the `Dockerfile` in the repo
+```bash
+$ sudo docker run --rm --network host firgavin/mini-node-exporter:v6
+```
 
-### Goal 2
+mini-node-exporter will listen on `0.0.0.0:23333`, and expose several endpoints:
 
-Startup the monitoring stack of prometheus and grafana, and show these metrics on a grafana dashboard.
+- `/info/hostname` shows the hostname with plain text
+- `/info/uptime` shows the uptime of the system in seconds with plain text
+- `/info/load` shows the load average in 1m, 5m and 15m with JSON, example `{"1m": 0.57, "5m":0.80, "15m":0.77}`
+- `/metrics` exposes metrics that could be scraped by prometheus
+    - `node_load`: load average, with a label for three duration
+    - `node_uptime`: uptime of the system in seconds
 
-You should:
+Then you can deploy Prometheus and Grafana on localhost to collect node information.
 
-- execute `mini-node-exporter` on your host
-- execute prometheus on your host, and configure it for collecting metrics from `mini-node-exporter`
-- execute grafana on your host, and configure it for using prometheus as the datasource
-- create a grafana dashboard for showing these metrics provided by `mini-node-exporter`, in any forms.
+### Build on kubernetes
 
-Please let it collector data for several minutes and take a screenshot of your grafana dashboard, email me the screenshot. :P
+You can also build all of this on Kubernetes. Make sure your `kubeconfig` has enough authority. The monitoring stack
+is orchestrated as follows:
 
-optional bonus:
+1. daemonSet for` mini-node-exporter`
+2. deployment with 1 replica for `prometheus` and `grafana`
+3. `prometheus` collect all exporter pods with specify annotations and labels
+4. module communicates each others through `service`
 
-- orcherating the monitroing stack and `mini-node-exporter` application by docker-compose/vagrant/kubernetes or any other forms, provides the manifest files in the repo
+Apply manifests:
+
+```bash
+$ kubectl apply -k manifests
+```
+
+Example output:
+
+```bash
+serviceaccount/prometheus unchanged
+Warning: rbac.authorization.k8s.io/v1beta1 ClusterRole is deprecated in v1.17+, unavailable in v1.22+; use rbac.authorization.k8s.io/v1 ClusterRole
+clusterrole.rbac.authorization.k8s.io/prometheus unchanged
+Warning: rbac.authorization.k8s.io/v1beta1 ClusterRoleBinding is deprecated in v1.17+, unavailable in v1.22+; use rbac.authorization.k8s.io/v1 ClusterRoleBinding
+clusterrolebinding.rbac.authorization.k8s.io/prometheus unchanged
+configmap/grafana-dashboard-gd29k862kg unchanged
+configmap/grafana-datasource unchanged
+configmap/prometheus-grafana unchanged
+service/grafana unchanged
+service/node-exporter unchanged
+service/prometheus unchanged
+deployment.apps/grafana unchanged
+deployment.apps/prometheus unchanged
+daemonset.apps/node-exporter unchanged
+
+```
+
+**Note:**
+
+I use `NodePort` on each service for efficient debugging. This may not be scientific. Then list services to get
+endpoints:
+
+```bash
+$ kubectl get svc           
+NAME            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)           AGE
+kubernetes      ClusterIP   10.43.0.1      <none>        443/TCP           22h
+grafana         NodePort    10.43.142.87   <none>        3000:32300/TCP    12h
+node-exporter   NodePort    10.43.149.18   <none>        23333:32333/TCP   12h
+prometheus      NodePort    10.43.209.1    <none>        9090:32390/TCP    12h
+
+```
+
+Access Prometheus and Grafana on web browser:
+
+![prometheus_screenshot](media/prometheus.png)
+
+![grafana_screenshot](media/grafana.png)
 
 ## References
-
-some information that might be helpful:
 
 - https://prometheus.io/docs/prometheus/latest/getting_started/
 - https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 - https://prometheus.io/docs/instrumenting/clientlibs/
 - https://man7.org/linux/man-pages/man5/proc.5.html
-
-## Other
-
-Happy Coding!
+- https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
+- https://kubernetes.io/docs/concepts/services-networking/service/
 

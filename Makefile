@@ -1,17 +1,17 @@
-BIN_DIR ?= $(CURDIR)/bin
+BINDIR ?= $(CURDIR)/bin
 
-main: exporter
+all: exporter
 
-exporter: $(BIN_DIR)/exporter
+exporter: $(BINDIR)/node-exporter
 
 prepare:
 	go mod tidy
 
 clean:
-	rm -r $(BIN_DIR)
+	rm -r $(BINDIR)
 
-$(BIN_DIR)/exporter: prepare
+$(BINDIR)/node-exporter: prepare
 	CGO_ENABLED=0 go build -o $@ ./cmd/main.go
 
-.PHONY: main prepare clean
+.PHONY: all prepare clean
 

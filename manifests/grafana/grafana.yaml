@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource
+  namespace: default
+data:
+  datasource.yaml: |
+    apiVersion: 1
+
+    datasources:
+      - name: prometheus
+        type: prometheus
+        access: proxy
+        orgId: 1
+        url: http://prometheus:9090
+        editable: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - name: datasource
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard
+              mountPath: /etc/grafana/provisioning/dashboards
+          securityContext:
+            runAsUser: 0
+      volumes:
+        - name: datasource
+          configMap:
+            name: grafana-datasource
+            items:
+              - key: datasource.yaml
+                path: datasource.yaml
+        - name: dashboard
+          configMap:
+            name: grafana-dashboard
+            items:
+              - key: dashboard.yaml
+                path: dashboard.yaml
+              - key: node-dashboard.json
+                path: node-dashboard.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 32300

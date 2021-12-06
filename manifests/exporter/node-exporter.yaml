@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: default
+
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "23333"
+        prometheus.io/path: "metrics"
+    spec:
+      containers:
+        - image: firgavin/mini-node-exporter:v6
+          imagePullPolicy: IfNotPresent
+          name: node-exporter
+          # securityContext:
+          #   privileged: true
+          ports:
+            - containerPort: 23333
+              protocol: TCP
+              name: http
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter
+spec:
+  type: NodePort
+  selector:
+    app: node-exporter
+  ports:
+    - name: http
+      port: 23333
+      targetPort: 23333
+      nodePort: 32333

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - exporter/node-exporter.yaml
+  - prometheus/prometheus.yaml
+  - prometheus/prometheus-rbac.yaml
+  - grafana/grafana.yaml
+  - dnsutils/dnsutils.yml
+configMapGenerator:
+  - name: grafana-dashboard
+    files:
+      - grafana/dashboard/dashboard.yaml
+      - grafana/dashboard/node-dashboard.json
